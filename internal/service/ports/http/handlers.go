@@ -25,9 +25,9 @@ func NewHandler(svc service.Servicer) *Handler {
 	}
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /getCurrentBlock", h.GetCurrentBlock)
+	mux.HandleFunc("GET /current-block", h.GetCurrentBlock)
 	mux.HandleFunc("POST /subscribe", h.Subscribe)
-	mux.HandleFunc(fmt.Sprintf("GET /getTransactions/{%s}", addressParam), h.GetTransactions)
+	mux.HandleFunc(fmt.Sprintf("GET /transactions/{%s}", addressParam), h.GetTransactions)
 
 	h.Handler = mux
 

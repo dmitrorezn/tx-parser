@@ -40,7 +40,7 @@ type blockResponse struct {
 }
 
 func (c *Client) GetCurrentBlock(ctx context.Context) (int, error) {
-	body, err := c.doGET(ctx, "getCurrentBlock")
+	body, err := c.doGET(ctx, "current-block")
 	if err != nil {
 		return 0, err
 	}
@@ -89,7 +89,7 @@ type Transaction struct {
 }
 
 func (c *Client) GetTransactions(ctx context.Context, address string) ([]Transaction, error) {
-	path, err := url.JoinPath("getTransactions", address)
+	path, err := url.JoinPath("transactions", address)
 	if err != nil {
 		return nil, err
 	}

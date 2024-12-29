@@ -11,10 +11,10 @@ exec:
 	./build/server
 
 getCurrBlock:
-	curl -X GET http://localhost:8080/getCurrentBlock
+	curl -X GET http://localhost:8080/current-block
 
 sub:
 	curl -X POST http://localhost:8080/subscribe -d '{"address": "${ADDR}"}'
 
 getTxs:
-	curl -X GET http://localhost:8080/getTransactions/${ADDR}
+	curl -X GET http://localhost:8080/transactions/${ADDR}
