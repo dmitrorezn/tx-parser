@@ -1,0 +1,8 @@
+POST http://localhost:8080/subscribe
+Content-Type: application/json
+
+# get any address from eth scan and setup server 'blockStart' to tx block -1 and subscribe exec request
+# src: https://etherscan.io/txs?p=1
+{
+  "address": "0xf34aC04a28F7CB5324A167C96B24ADE9c742B44f"
+}

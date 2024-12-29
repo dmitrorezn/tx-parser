@@ -1,0 +1,3 @@
+# GET http://{HOST}/getTransactions/{addr_from_subscribe.http}
+
+GET http://localhost:8080/getTransactions/0xf34aC04a28F7CB5324A167C96B24ADE9c742B44f
