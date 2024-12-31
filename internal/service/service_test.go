@@ -24,12 +24,7 @@ type EthRpcClient struct {
 func (e *EthRpcClient) GetBlockNumber(_ context.Context) (int, error) {
 	for _, call := range e.ExpectedCalls {
 		if call.Method == "GetBlockNumber" {
-			ierr := call.ReturnArguments.Get(1)
-			if ierr == nil {
-				return call.ReturnArguments.Get(0).(int), nil
-			}
-			return call.ReturnArguments.Get(0).(int), ierr.(error)
-
+			return call.ReturnArguments.Get(0).(int), call.ReturnArguments.Error(1)
 		}
 	}
 	return 0, errors.New("not found mock GetBlockNumber")
@@ -38,12 +33,7 @@ func (e *EthRpcClient) GetBlockNumber(_ context.Context) (int, error) {
 func (e *EthRpcClient) GetBlockTxsByNumber(_ context.Context, _ int) ([]domain.Transaction, error) {
 	for _, call := range e.ExpectedCalls {
 		if call.Method == "GetBlockTxsByNumber" {
-			ierr := call.ReturnArguments.Get(1)
-			if ierr == nil {
-				return call.ReturnArguments.Get(0).([]domain.Transaction), nil
-			}
-
-			return call.ReturnArguments.Get(0).([]domain.Transaction), ierr.(error)
+			return call.ReturnArguments.Get(0).([]domain.Transaction), call.ReturnArguments.Error(1)
 		}
 	}
 
