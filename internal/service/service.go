@@ -97,7 +97,7 @@ func (s *Service) Run(ctx context.Context) {
 				slog.String("process_time", time.Since(start).String()),
 			)
 		} else if processed {
-			s.logger.Info(ctx, "processTransactions transactions processed",
+			s.logger.Info(ctx, "processTransactions processed",
 				slog.String("process_time", time.Since(start).String()),
 			)
 		}
@@ -150,6 +150,7 @@ func (s *Service) handleTransactionsMatching(
 		lastProcessedTxIndex int
 		stat                 = struct {
 			Processed int
+			Skipped   int
 			Matched   int
 		}{}
 	)
@@ -160,7 +161,10 @@ func (s *Service) handleTransactionsMatching(
 
 			continue
 		}
+		lastProcessedTxIndex = txIdx
 		if prevLastProcessedIndex != 0 && txIdx <= prevLastProcessedIndex {
+			stat.Skipped++
+
 			continue
 		}
 		stat.Processed++
@@ -179,7 +183,6 @@ func (s *Service) handleTransactionsMatching(
 				joinedErr = errors.Join(joinedErr, err)
 			}
 		}
-		lastProcessedTxIndex = txIdx
 	}
 	s.blockStorage.SetCurrentBlock(blockNumber)
 	s.blockStorage.SetLastProcessedTxIndex(blockNumber, lastProcessedTxIndex)

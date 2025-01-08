@@ -1,5 +1,5 @@
 run:
-	go run ./cmd/server -addr localhost:8080 -blockStart 21508148 -interval 1s -eth_addr https://ethereum-rpc.publicnode.com
+	go run ./cmd/server -addr localhost:8080 -blockStart 0 -interval 1s -eth_addr https://ethereum-rpc.publicnode.com
 
 build:
 	go build -o build/server ./cmd/server
