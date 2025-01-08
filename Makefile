@@ -5,7 +5,7 @@ build:
 	go build -o build/server ./cmd/server
 
 test:
-	go test ./...
+	go test ./... && go clean -testcache
 
 exec:
 	./build/server
