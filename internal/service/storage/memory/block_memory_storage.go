@@ -33,9 +33,9 @@ func (bs *BlockNumberStorage) DelLastProcessedTxIndex(blockNumber int) {
 }
 
 func (bs *BlockNumberStorage) GetLastProcessedTxIndex(block int) (int, bool) {
-	bs.mu.Lock()
+	bs.mu.RLock()
 	idx, ok := bs.processedTransactions[block]
-	bs.mu.Unlock()
+	bs.mu.RUnlock()
 
 	return idx, ok
 }

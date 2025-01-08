@@ -39,7 +39,6 @@ type BlocksStorage interface {
 type Storage interface {
 	AddSubscriber(ctx context.Context, addr domain.Address) error
 	ExistsSubscriber(ctx context.Context, addr domain.Address) (bool, error)
-	GetSubscribers(ctx context.Context) ([]domain.Address, error)
 	AddTx(ctx context.Context, addr domain.Address, tx domain.Transaction) error
 	GetTransactions(ctx context.Context, addr domain.Address) ([]domain.Transaction, error)
 }
@@ -130,19 +129,11 @@ func (s *Service) ProcessTransactions(ctx context.Context) (bool, error) {
 		slog.Int("currentBlockNumber", currentBlockNumber),
 		slog.Int("prevLastProcessedIndex", prevLastProcessedIndex),
 	)
-	subscribedAddress, err := s.storage.GetSubscribers(ctx)
-	if err != nil {
-		return false, err
-	}
-	if len(subscribedAddress) == 0 {
-		return false, err
-	}
 	txs, err := s.client.GetBlockTxsByNumber(ctx, currentBlockNumber)
 	if err != nil {
 		return false, err
 	}
-
-	if err = s.handleTransactionsMatching(ctx, currentBlockNumber, prevLastProcessedIndex, txs, subscribedAddress); err != nil {
+	if err = s.handleTransactionsMatching(ctx, currentBlockNumber, prevLastProcessedIndex, txs); err != nil {
 		return true, err
 	}
 
@@ -154,7 +145,6 @@ func (s *Service) handleTransactionsMatching(
 	blockNumber int,
 	prevLastProcessedIndex int,
 	txs []domain.Transaction,
-	subscribedAddress []domain.Address,
 ) (joinedErr error) {
 	var (
 		lastProcessedTxIndex int
@@ -170,12 +160,18 @@ func (s *Service) handleTransactionsMatching(
 
 			continue
 		}
-		if txIdx < prevLastProcessedIndex {
+		if prevLastProcessedIndex != 0 && txIdx <= prevLastProcessedIndex {
 			continue
 		}
 		stat.Processed++
-		for _, addr := range subscribedAddress {
-			if !tx.BelongsToAddr(addr) {
+		var exist bool
+		for _, addr := range []domain.Address{tx.From, tx.To} {
+			if exist, err = s.storage.ExistsSubscriber(ctx, addr); err != nil {
+				joinedErr = errors.Join(joinedErr, err)
+
+				continue
+			}
+			if !exist {
 				continue
 			}
 			stat.Matched++

@@ -18,7 +18,7 @@ func genAddress() string {
 	return hex.EncodeToString(addr[:])
 }
 
-func TestGetSubscribers(t *testing.T) {
+func TestExistsSubscriber(t *testing.T) {
 	storage := NewStorage()
 
 	ctx := context.Background()
@@ -30,10 +30,10 @@ func TestGetSubscribers(t *testing.T) {
 	err = storage.AddSubscriber(ctx, addr)
 	require.Error(t, domain.ErrAddressAlreadySubscribed)
 
-	addrs, err := storage.GetSubscribers(ctx)
+	ex, err := storage.ExistsSubscriber(ctx, addr)
 	require.NoError(t, err)
 
-	require.True(t, slices.Contains(addrs, addr))
+	require.True(t, ex)
 }
 
 func TestGetTransactions(t *testing.T) {
