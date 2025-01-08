@@ -32,23 +32,13 @@ func (s *Storage) AddSubscriber(_ context.Context, addr domain.Address) error {
 
 	return nil
 }
+
 func (s *Storage) ExistsSubscriber(_ context.Context, addr domain.Address) (bool, error) {
 	s.subsMu.RLock()
 	_, ok := s.subs[addr]
 	s.subsMu.RUnlock()
 
 	return ok, nil
-}
-
-func (s *Storage) GetSubscribers(_ context.Context) ([]domain.Address, error) {
-	s.subsMu.RLock()
-	addrs := make([]domain.Address, 0, len(s.subs))
-	for addr := range s.subs {
-		addrs = append(addrs, addr)
-	}
-	s.subsMu.RUnlock()
-
-	return addrs, nil
 }
 
 func (s *Storage) AddTx(_ context.Context, addr domain.Address, tx domain.Transaction) error {
