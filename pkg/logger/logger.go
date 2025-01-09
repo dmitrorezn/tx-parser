@@ -12,6 +12,10 @@ func JSONFactory(w io.Writer, opts *slog.HandlerOptions) slog.Handler {
 	return slog.NewJSONHandler(w, opts)
 }
 
+func TextFactory(w io.Writer, opts *slog.HandlerOptions) slog.Handler {
+	return slog.NewTextHandler(w, opts)
+}
+
 func WithHandlerFactory(handlerFactory func(w io.Writer, opts *slog.HandlerOptions) slog.Handler) OptionFunc {
 	return func(o *options) {
 		o.handlerFactory = handlerFactory

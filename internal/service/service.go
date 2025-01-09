@@ -3,7 +3,10 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dmitrorezn/tx-parser/internal/domain"
@@ -53,14 +56,17 @@ type Service struct {
 
 func NewConfig(
 	txFetchInterval time.Duration,
+	matcherWorkers int,
 ) Config {
 	return Config{
 		txFetchInterval: txFetchInterval,
+		matcherWorkers:  matcherWorkers,
 	}
 }
 
 type Config struct {
 	txFetchInterval time.Duration
+	matcherWorkers  int
 }
 
 type Logger interface {
@@ -140,57 +146,103 @@ func (s *Service) ProcessTransactions(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (s *Service) handleTransactionsMatching(
-	ctx context.Context,
-	blockNumber int,
-	prevLastProcessedIndex int,
-	txs []domain.Transaction,
-) (joinedErr error) {
-	var (
-		lastProcessedTxIndex int
-		stat                 = struct {
-			Processed int
-			Skipped   int
-			Matched   int
-		}{}
+type Stat struct {
+	Processed atomic.Int32
+	Skipped   atomic.Int32
+	Matched   atomic.Int32
+}
+
+func (s *Stat) String() string {
+	return fmt.Sprint(
+		" Skipped: ", s.Skipped.Load(),
+		" Processed: ", s.Processed.Load(),
+		" Matched: ", s.Matched.Load(),
 	)
-	for _, tx := range txs {
+}
+
+func (s *Service) handleTransactions(
+	ctx context.Context,
+	stat *Stat,
+	lastProcessedIndex int,
+	txStream chan domain.Transaction,
+	errsStream chan error,
+) {
+	var exist bool
+	for tx := range txStream {
 		txIdx, err := converter.ParseHexInt(tx.TransactionIndex)
 		if err != nil {
-			joinedErr = errors.Join(joinedErr, err)
+			errsStream <- err
 
 			continue
 		}
-		lastProcessedTxIndex = txIdx
-		if prevLastProcessedIndex != 0 && txIdx <= prevLastProcessedIndex {
-			stat.Skipped++
+		if lastProcessedIndex != 0 && txIdx <= lastProcessedIndex {
+			stat.Skipped.Add(1)
 
 			continue
 		}
-		stat.Processed++
-		var exist bool
+		stat.Processed.Add(1)
+
 		for _, addr := range []domain.Address{tx.From, tx.To} {
 			if exist, err = s.storage.ExistsSubscriber(ctx, addr); err != nil {
-				joinedErr = errors.Join(joinedErr, err)
+				errsStream <- err
 
 				continue
 			}
 			if !exist {
 				continue
 			}
-			stat.Matched++
+			stat.Matched.Add(1)
 			if err = s.storage.AddTx(ctx, addr, tx); err != nil {
-				joinedErr = errors.Join(joinedErr, err)
+				errsStream <- err
 			}
 		}
 	}
+}
+
+func (s *Service) handleTransactionsMatching(
+	ctx context.Context,
+	blockNumber int,
+	lastProcessedIndex int,
+	txs []domain.Transaction,
+) (joinedErr error) {
+	var (
+		stat      = new(Stat)
+		txStream  = make(chan domain.Transaction)
+		errStream = make(chan error)
+	)
+	wg := sync.WaitGroup{}
+	for i := 0; i < s.cfg.matcherWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			s.handleTransactions(ctx, stat, lastProcessedIndex, txStream, errStream)
+			wg.Done()
+		}()
+	}
+	go func() {
+		for _, tx := range txs {
+			txStream <- tx
+		}
+		close(txStream)
+	}()
+	go func() {
+		wg.Wait()
+		close(errStream)
+	}()
+	for err := range errStream {
+		joinedErr = errors.Join(joinedErr, err)
+	}
 	s.blockStorage.SetCurrentBlock(blockNumber)
+
+	lastProcessedTxIndex, err := converter.ParseHexInt(txs[len(txs)-1].TransactionIndex)
+	if err != nil {
+		return errors.Join(joinedErr, err)
+	}
 	s.blockStorage.SetLastProcessedTxIndex(blockNumber, lastProcessedTxIndex)
 
 	logger.AttrsFromCtx(ctx).PutAttrs(
 		slog.Int("tx_len", len(txs)),
 		slog.Int("last_tx_idx", lastProcessedTxIndex),
-		slog.Any("stat", stat),
+		slog.Any("stat", stat.String()),
 	)
 
 	return joinedErr

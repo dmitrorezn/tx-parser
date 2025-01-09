@@ -24,6 +24,7 @@ var (
 	ethAddr          = flag.String("eth_addr", "https://ethereum-rpc.publicnode.com", "http server address")
 	fetchTxsInterval = flag.Duration("interval", 10*time.Second, "fetch transactions interval")
 	blockStart       = flag.Int("blockStart", 0, "block from where to start")
+	workers          = flag.Int("workers", 10, "count handle matching workers")
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 	defer cancel()
 
 	loggr := logger.NewAttrLogger(logger.NewLogger(
-		logger.WithHandlerFactory(logger.JSONFactory),
+		logger.WithHandlerFactory(logger.TextFactory),
 		logger.WithWriter(os.Stdout),
 		logger.WithLevel(slog.LevelDebug),
 	))
@@ -44,7 +45,7 @@ func main() {
 	var (
 		storage          = memory.NewStorage()
 		blockNumberStore = memory.NewBlockNumberStorage()
-		cfg              = service.NewConfig(*fetchTxsInterval)
+		cfg              = service.NewConfig(*fetchTxsInterval, *workers)
 		svc              = service.NewService(client, blockNumberStore, storage, loggr, cfg)
 		handler          = httpport.NewHandler(svc)
 	)
