@@ -49,7 +49,7 @@ func setup(t *testing.T, currentBlock int) (*service.Service, service.BlocksStor
 		loggr            = logger.NewAttrLogger(logger.NewLogger())
 		storage          = memory.NewStorage()
 		blockNumberStore = memory.NewBlockNumberStorage()
-		cfg              = service.NewConfig(100 * time.Millisecond)
+		cfg              = service.NewConfig(100*time.Millisecond, 10)
 		svc              = service.NewService(ethClient, blockNumberStore, storage, loggr, cfg)
 	)
 	blockNumberStore.SetCurrentBlock(currentBlock)

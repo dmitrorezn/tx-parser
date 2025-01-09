@@ -28,7 +28,7 @@ func setupServiceClient(t *testing.T, currentBlock int) (*service.Service, servi
 		loggr            = logger.NewAttrLogger(logger.NewLogger())
 		storage          = memory.NewStorage()
 		blockNumberStore = memory.NewBlockNumberStorage()
-		cfg              = service.NewConfig(100 * time.Millisecond)
+		cfg              = service.NewConfig(100*time.Millisecond, 10)
 		svc              = service.NewService(ethClient, blockNumberStore, storage, loggr, cfg)
 		handler          = httpport.NewHandler(svc)
 		srv              = httptest.NewServer(handler)
