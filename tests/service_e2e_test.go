@@ -65,6 +65,7 @@ func TestGetCurrentBlock(t *testing.T) {
 		"2. Success: current block equal to blockchain head": {
 			expectedBlock: func() int {
 				n, _ := ethClient.GetBlockNumber(ctx)
+
 				return n
 			},
 			preconditions: func() {
@@ -80,13 +81,17 @@ func TestGetCurrentBlock(t *testing.T) {
 	}
 	for name, testCase := range tests {
 		t.Run(name, func(t *testing.T) {
+			var expected = make(chan int)
+			go func() {
+				expected <- testCase.expectedBlock()
+			}()
 			if testCase.preconditions != nil {
 				testCase.preconditions()
 			}
 			block, err := svcClient.GetCurrentBlock(ctx)
 			require.NoError(t, err)
 
-			require.Equal(t, testCase.expectedBlock(), block)
+			require.Equal(t, <-expected, block)
 		})
 	}
 }

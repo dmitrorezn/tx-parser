@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"sync/atomic"
 
 	"github.com/dmitrorezn/tx-parser/internal/domain"
+	"github.com/dmitrorezn/tx-parser/pkg/converter"
 )
 
 type JsonRpcClient struct {
@@ -22,12 +22,6 @@ func NewJsonRpcClient(addr string) (*JsonRpcClient, error) {
 		httpClient: http.DefaultClient,
 	}, nil
 }
-
-const (
-	hexPrefix          = "0x"
-	hexBase            = 16
-	blockNumberBitSize = 64
-)
 
 var (
 	ErrCallBlockchain = errors.New("err call blockchain")
@@ -73,47 +67,29 @@ func newRequest(method string, params ...any) Request {
 	}
 }
 
-var ErrInvalidBlockNumberHex = errors.New("invalid block number hex")
-
-func ParseHexInt(str string) (int, error) {
-	number, err := strconv.ParseInt(str[len(hexPrefix):], hexBase, blockNumberBitSize)
-	if err != nil {
-		return 0, err
-	}
-
-	return int(number), err
-}
-
 func (c *JsonRpcClient) GetBlockNumber(ctx context.Context) (int, error) {
 	var numberHex string
 	err := c.doRequest(ctx, "eth_blockNumber", &numberHex)
 	if err != nil {
 		return 0, errors.Join(err, ErrCallBlockchain)
 	}
-	if len(numberHex) < len(hexPrefix) {
-		return 0, ErrInvalidBlockNumberHex
-	}
 
-	return ParseHexInt(numberHex)
+	return converter.ParseHexInt(numberHex)
 }
 
-func FormatIntToHex(number int) string {
-	return hexPrefix + strconv.FormatInt(int64(number), hexBase)
-}
+type numberAndFullTxFlag [2]any
 
 func (c *JsonRpcClient) GetBlockTxsByNumber(ctx context.Context, number int) ([]domain.Transaction, error) {
-	type numberAndFlag [2]any
 	var (
-		params = numberAndFlag{
-			FormatIntToHex(number), //block number hex formated
-			true,                   // return full tx data
+		params = numberAndFullTxFlag{
+			converter.FormatHexInt(number), //block number hex formatted
+			true,                           // return full tx data
 		}
 		response struct {
 			Txs []domain.Transaction `json:"transactions"`
 		}
 	)
-	err := c.doRequest(ctx, "eth_getBlockByNumber", &response, params[:]...)
-	if err != nil {
+	if err := c.doRequest(ctx, "eth_getBlockByNumber", &response, params[:]...); err != nil {
 		return nil, errors.Join(err, ErrCallBlockchain)
 	}
 
